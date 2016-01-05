@@ -1,32 +1,34 @@
-# This image provides a base for building and running WildFly applications.
-# It builds using maven and runs the resulting artifacts on WildFly 9.0
+# This image provides a base for building and running KeyCloak.
+# It builds using maven and runs the resulting artifacts on KeyCloak 1.7.0.Final
 
 FROM openshift/base-centos7
 
-MAINTAINER Ben Parees <bparees@redhat.com>
+MAINTAINER Vineet Reynolds <vpereira@redhat.com>
 
 EXPOSE 8080
 
-ENV WILDFLY_VERSION 9.0.2
-ENV WILDFLY_VERSION_BIN 9.0.2.Final
+ENV KEYCLOAK_VERSION 1.7.0.Final
 ENV MAVEN_VERSION 3.3.3
 
-LABEL io.k8s.description="Platform for building and running JEE applications on WildFly 9.0" \
-      io.k8s.display-name="WildFly 9.0" \
+LABEL io.k8s.description="Platform for building and running KeyCloak providers on KeyCloak 1.7.0.Final" \
+      io.k8s.display-name="KeyCloak 1.7.0.Final" \
       io.openshift.expose-services="8080:http" \
-      io.openshift.tags="builder,wildfly,wildfly90" \
+      io.openshift.tags="builder,keycloak,keycloak170" \
       io.openshift.s2i.destination="/opt/s2i/destination"
 
-# Install Maven, Wildfly 9
+# Install Maven, KeyCloak 1.7.0.Final
 RUN yum install -y --enablerepo=centosplus \
-    tar unzip bc which lsof java-1.8.0-openjdk java-1.8.0-openjdk-devel && \
+    tar unzip bc which lsof java-1.8.0-openjdk java-1.8.0-openjdk-devel saxon jq && \
     yum clean all -y && \
     (curl -0 http://www.us.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz | \
     tar -zx -C /usr/local) && \
     ln -sf /usr/local/apache-maven-$MAVEN_VERSION/bin/mvn /usr/local/bin/mvn && \
     mkdir -p /wildfly && \
-    (curl -0 http://download.jboss.org/wildfly/$WILDFLY_VERSION_BIN/wildfly-$WILDFLY_VERSION_BIN.tar.gz | tar -zx --strip-components=1 -C /wildfly) && \
+    (curl -0 https://downloads.jboss.org/keycloak/$KEYCLOAK_VERSION/keycloak-$KEYCLOAK_VERSION.tar.gz | tar -zx --strip-components=1 -C /wildfly) && \
     mkdir -p /opt/s2i/destination
+
+ADD setLogLevel.xsl /wildfly/
+RUN java -jar /usr/share/java/saxon.jar -s:/wildfly/standalone/configuration/standalone.xml -xsl:/wildfly/setLogLevel.xsl -o:/wildfly/standalone/configuration/standalone.xml
 
 # Add sti wildfly customizations
 ADD ./contrib/wfmodules/ /wildfly/modules/

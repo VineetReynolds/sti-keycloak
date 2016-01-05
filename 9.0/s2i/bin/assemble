@@ -199,15 +199,22 @@ else
   echo "Copying binaries in source directory into $DEPLOY_DIR for later deployment..."
 fi
 
-if [ -d $LOCAL_SOURCE_DIR/target ]; then
-  cp $LOCAL_SOURCE_DIR/target/*.war $DEPLOY_DIR >& /dev/null
-  chgrp -R 0 $DEPLOY_DIR
-  chmod -R g+rw $DEPLOY_DIR
+if [ -z "$KEYCLOAK_PROVIDER_NAME" ]; then
+  KEYCLOAK_PROVIDER_NAME="org.jboss.examples.demo"
 fi
-if [ -d $LOCAL_SOURCE_DIR/deployments ]; then
-  cp $LOCAL_SOURCE_DIR/deployments/*.war $DEPLOY_DIR >& /dev/null
-  chgrp -R 0 $DEPLOY_DIR
-  chmod -R g+rw $DEPLOY_DIR
+
+# Add the Keycloak provider module
+eval KEYCLOAK_PROVIDER_JAR=(${LOCAL_SOURCE_DIR}"/target/*.jar")
+echo "Preparing to install ${KEYCLOAK_PROVIDER_JAR} as a JBoss module named ${KEYCLOAK_PROVIDER_NAME} ..."
+/wildfly/bin/jboss-cli.sh --command="module add --name=${KEYCLOAK_PROVIDER_NAME} --resources=${KEYCLOAK_PROVIDER_JAR} --module-xml=${LOCAL_SOURCE_DIR}/src/main/etc/module.xml"
+# Modify keycloak-server.json - adds the module to the providers array using the jq cli tool. Write the output to a file and overwrite the existing keycloak-server.json
+jq ".providers |= (. + [\"module:$KEYCLOAK_PROVIDER_NAME\"] | unique)" /wildfly/standalone/configuration/keycloak-server.json > tmp.json && mv -f tmp.json /wildfly/standalone/configuration/keycloak-server.json
+
+# Copy the Keycloak realm file to Keycloak home dir
+KEYCLOAK_REALM_FILE=$LOCAL_SOURCE_DIR/*-realm.json
+if [ -f $KEYCLOAK_REALM_FILE ];
+then
+  cp $KEYCLOAK_REALM_FILE /wildfly/imported-realm.json
 fi
 
 if [ -d $LOCAL_SOURCE_DIR/cfg ]; then

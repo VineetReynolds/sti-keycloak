@@ -1,2 +1,8 @@
 #!/bin/bash
-exec /wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0
+KEYCLOAK_REALM_FILE=/wildfly/imported-realm.json
+if [ -f $KEYCLOAK_REALM_FILE ];
+then
+  exec /wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0 -Dkeycloak.migration.action=import -Dkeycloak.migration.provider=singleFile -Dkeycloak.migration.strategy=OVERWRITE_EXISTING -Dkeycloak.migration.file=/wildfly/imported-realm.json
+else
+  exec /wildfly/bin/standalone.sh -b 0.0.0.0 -bmanagement 0.0.0.0
+fi

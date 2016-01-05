@@ -1,0 +1,41 @@
+{
+  "kind": "BuildConfig",
+  "apiVersion": "v1",
+  "metadata":{
+    "name": "keycloak-9-centos7-build"
+  },
+  "spec": {
+    "triggers": [
+      {
+        "type": "GitHub",
+        "github": {
+          "secret": "secret101"
+        }
+      }
+    ],
+    "source" : {
+      "type" : "Git",
+      "git" : {
+        "uri": "git://github.com/VineetReynolds/sti-keycloak.git"
+      },
+      "contextDir": "9.0"
+    },
+    "strategy": {
+      "type": "Docker",
+      "dockerStrategy": {
+        "env": [
+          {
+            "name": "IMAGE_NAME",
+            "value": "openshift/keycloak-9-centos7"
+          }
+        ]
+      }
+    },
+    "output": {
+      "to": {
+        "kind": "ImageStreamTag",
+        "name": "keycloak-9-centos7:latest"
+      }
+    }
+  }
+}
